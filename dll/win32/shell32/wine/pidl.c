@@ -1684,6 +1684,12 @@ LPITEMIDLIST _ILCreateAdminTools(void)
     return _ILCreateGuid(PT_GUID, &CLSID_AdminFolderShortcut); //FIXME
 }
 
+LPITEMIDLIST _ILCreateConnections(void)
+{
+    TRACE("()\n");
+    return _ILCreateGuid(PT_GUID, &CLSID_ConnectionFolder);
+}
+
 LPITEMIDLIST _ILCreateGuid(PIDLTYPE type, REFIID guid)
 {
     LPITEMIDLIST pidlOut;
@@ -1738,7 +1744,34 @@ LPITEMIDLIST _ILCreateGuidFromStrW(LPCWSTR szGUID)
     return _ILCreateGuid(PT_GUID, &iid);
 }
 
-LPITEMIDLIST _ILCreateFromFindDataW( const WIN32_FIND_DATAW *wfd )
+#ifdef __REACTOS__
+UINT _SHGetCSIDLByNameW(LPCWSTR lpszName);
+
+// If szUrl is '::{GUID}' then returns a GUID
+// otherwise it tries to resolve the shortcut.
+LPITEMIDLIST _ILCreateGuidFromShellUrlW(LPCWSTR szUrl)
+{
+    UINT idx;
+    LPITEMIDLIST pidl;
+    
+    if (szUrl[0] == L':' && szUrl[1] == L':')
+    {
+        return _ILCreateGuidFromStrW(szUrl + 2);
+    }
+    
+    idx = _SHGetCSIDLByNameW(szUrl);
+    if (idx == UINT_MAX)
+    {
+        ERR("%s is not a shell shortcut\n", debugstr_w(szUrl));
+        return NULL;
+    }
+    
+    SHGetSpecialFolderLocation(NULL, idx, &pidl);
+    return pidl;
+}
+#endif // __REACTOS__
+
+LPITEMIDLIST _ILCreateFromFindDataW(const WIN32_FIND_DATAW *wfd)
 {
     char    buff[MAX_PATH + 14 +1]; /* see WIN32_FIND_DATA */
     DWORD   len, len1, wlen, alen;
